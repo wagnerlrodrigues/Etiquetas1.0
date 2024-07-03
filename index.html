@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etiquetas de Escola</title>
+    <style>
+        .etiqueta {
+            background-color: #ffffff;
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            width: 579px;
+            height: 150px;
+            border: 1px solid #000;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            color: #000000;
+            padding: 20px;
+            margin-top: 20px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .etiqueta svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .nomeEscola {
+            position: absolute;
+        }
+
+        .infoEscola {
+            position: absolute;
+        }
+
+        @media print {
+            .etiqueta {
+                display: block;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .etiquetas, .etiquetas * {
+                visibility: visible;
+            }
+            .etiquetas {
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+            #pesquisaEscola, #escolaSelect, button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Selecionar Escolas</h1>
+    <input type="text" id="pesquisaEscola" oninput="filtrarEscolas()" placeholder="Digite o nome da escola">
+    <select id="escolaSelect" multiple>
+        <option value="">Selecione uma escola</option>
+    </select>
+    <button onclick="gerarEtiquetas()">Gerar Etiquetas</button>
+
+    <div id="etiquetas" class="etiquetas"></div>
+
+    <script>
+        let dados;
+
+        fetch('dados.json')
+            .then(response => response.json())
+            .then(json => {
+                dados = json;
+                console.log('Dados carregados:', dados);
+                carregarEscolas();
+            })
+            .catch(error => console.error('Erro ao carregar o arquivo JSON:', error));
+
+        function carregarEscolas(filtro = '') {
+            const escolaSelect = document.getElementById('escolaSelect');
+            escolaSelect.innerHTML = '';
+            const escolas = [...new Set(dados.map(item => item.ESCOLA))];
+            escolas
+                .filter(escola => escola.toLowerCase().includes(filtro.toLowerCase()))
+                .forEach(escola => {
+                    const option = document.createElement('option');
+                    option.value = escola;
+                    option.textContent = escola;
+                    escolaSelect.appendChild(option);
+                });
+        }
+
+        function filtrarEscolas() {
+            const pesquisa = document.getElementById('pesquisaEscola').value;
+            carregarEscolas(pesquisa);
+        }
+
+        function gerarEtiquetas() {
+            const escolaSelect = document.getElementById('escolaSelect');
+            const etiquetasDiv = document.getElementById('etiquetas');
+            etiquetasDiv.innerHTML = '';
+
+            Array.from(escolaSelect.selectedOptions).forEach(option => {
+                const escolaDados = dados.find(item => item.ESCOLA === option.value);
+                if (escolaDados) {
+                    const etiquetaDiv = document.createElement('div');
+                    etiquetaDiv.className = 'etiqueta';
+                    etiquetaDiv.style.backgroundImage = `url(${escolaDados.CART})`;
+
+                    const nomeEscola = document.createElement('h2');
+                    nomeEscola.className = 'nomeEscola';
+                    nomeEscola.textContent = escolaDados.ESCOLA;
+                    nomeEscola.style.top = '10px';
+                    nomeEscola.style.left = '10px';
+
+                    const infoEscola = document.createElement('p');
+                    infoEscola.className = 'infoEscola';
+                    infoEscola.textContent = `INEP: ${escolaDados.INEP}, GRE: ${escolaDados.GRE}, ID: ${escolaDados.ID}`;
+                    infoEscola.style.top = '50px';
+                    infoEscola.style.left = '10px';
+
+                    etiquetaDiv.appendChild(nomeEscola);
+                    etiquetaDiv.appendChild(infoEscola);
+
+                    const svgFundo = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svgFundo.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                    svgFundo.setAttribute('viewBox', '0 0 800 200');
+                    svgFundo.innerHTML = escolaDados.SVG_CONTENT;
+                    etiquetaDiv.appendChild(svgFundo);
+
+                    etiquetasDiv.appendChild(etiquetaDiv);
+                }
+            });
+        }
+
+        function alterarPosicao(nome, top, left) {
+            const nomeEscola = document.querySelector(`.${nome}`);
+            nomeEscola.style.top = top;
+            nomeEscola.style.left = left;
+        }
+
+        // alterarPosicao('nomeEscola', '20px', '20px');
+        // alterarPosicao('infoEscola', '70px', '20px');
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+/* Exemplo de estilos para impressão */
+body {
+    background-color: #cc4646; /* Cor de fundo */
+    font-family: Arial, sans-serif; /* Fonte */
+    font-size: 12pt; /* Tamanho da fonte */
+    /* Outros estilos... */
+    section {
+        background-image: url("meu_projeto\imagens\seduc.jpg");
+    }
+    
+    
+}
