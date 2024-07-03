@@ -54,19 +54,79 @@
                 left: 0;
                 top: 0;
             }
-            #pesquisaEscola, #escolaSelect, button {
+            #pesquisaEscola, #escolaSelect, #autocomplete-list, button {
                 display: none;
             }
+        }
+
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 150px; /* Limitar a altura do dropdown */
+            overflow-y: auto;  /* Adicionar rolagem vertical */
+        }
+
+        .autocomplete-items div {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            cursor: pointer;
+            background-color: #fff;
+            border-bottom: 1px solid #d4d4d4;
+        }
+
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+
+        .autocomplete-active {
+            font-family: Arial, sans-serif;
+            background-color: #d4d4d4 !important;
+        }
+
+        .lista-escolas {
+            font-family: Arial, sans-serif;
+            max-height: 150px;
+            width: 579px;
+            overflow-y: auto;
+            border: 1px solid #000;
+            box-sizing: border-box;
+        }
+
+        .lista-escolas li {
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            padding: 10px;
+            border-bottom: 1px solid #d4d4d4;
+        }
+
+        .lista-escolas li:hover {
+            font-family: Arial, sans-serif;
+            background-color: #e9e9e9;
         }
     </style>
 </head>
 <body>
-    <h1>Selecionar Escolas</h1>
-    <input type="text" id="pesquisaEscola" oninput="filtrarEscolas()" placeholder="Digite o nome da escola">
-    <select id="escolaSelect" multiple>
-        <option value="">Selecione uma escola</option>
-    </select>
+    <h2>Todas as Escolas</h2>
+    <input type="text" id="filtroEscolas" oninput="filtrarListaEscolas()" placeholder="Filtrar escolas">
+    <div class="lista-escolas">
+        <ul id="listaEscolas"></ul>
+    </div>
+    
+    <h2>Fila de impressão</h2>
+    <div class="lista-escolas">
+        <ul id="escolasSelecionadas"></ul>
+    </div>
+
     <button onclick="gerarEtiquetas()">Gerar Etiquetas</button>
+    <button onclick="window.print()">Imprimir / Salvar PDF</button>
+
+    <input type="text" id="pesquisaEscola" placeholder="Pesquisar escola">
 
     <div id="etiquetas" class="etiquetas"></div>
 
@@ -78,36 +138,91 @@
             .then(json => {
                 dados = json;
                 console.log('Dados carregados:', dados);
-                carregarEscolas();
+                carregarTodasEscolas();
+                carregarAutocomplete();
             })
             .catch(error => console.error('Erro ao carregar o arquivo JSON:', error));
 
-        function carregarEscolas(filtro = '') {
-            const escolaSelect = document.getElementById('escolaSelect');
-            escolaSelect.innerHTML = '';
-            const escolas = [...new Set(dados.map(item => item.ESCOLA))];
-            escolas
-                .filter(escola => escola.toLowerCase().includes(filtro.toLowerCase()))
-                .forEach(escola => {
-                    const option = document.createElement('option');
-                    option.value = escola;
-                    option.textContent = escola;
-                    escolaSelect.appendChild(option);
-                });
+        function carregarTodasEscolas() {
+            const listaEscolas = document.getElementById('listaEscolas');
+            listaEscolas.innerHTML = '';
+            dados.forEach(escola => {
+                const li = document.createElement('li');
+                li.textContent = escola.ESCOLA;
+                li.onclick = () => adicionarEscolaPorNome(escola.ESCOLA);
+                listaEscolas.appendChild(li);
+            });
         }
 
-        function filtrarEscolas() {
-            const pesquisa = document.getElementById('pesquisaEscola').value;
-            carregarEscolas(pesquisa);
+        function carregarAutocomplete() {
+            const input = document.getElementById('pesquisaEscola');
+            input.addEventListener("input", function() {
+                const val = this.value;
+                closeAllLists();
+                if (!val) return false;
+
+                const div = document.createElement("DIV");
+                div.setAttribute("id", this.id + "autocomplete-list");
+                div.setAttribute("class", "autocomplete-items");
+                this.parentNode.appendChild(div);
+
+                dados.forEach(escola => {
+                    if (escola.ESCOLA.toLowerCase().includes(val.toLowerCase())) {
+                        const b = document.createElement("DIV");
+                        b.innerHTML = "<strong>" + escola.ESCOLA.substr(0, val.length) + "</strong>";
+                        b.innerHTML += escola.ESCOLA.substr(val.length);
+                        b.innerHTML += "<input type='hidden' value='" + escola.ESCOLA + "'>";
+                        b.addEventListener("click", function() {
+                            input.value = this.getElementsByTagName("input")[0].value;
+                            closeAllLists();
+                        });
+                        div.appendChild(b);
+                    }
+                });
+            });
+
+            function closeAllLists(elmnt) {
+                const x = document.getElementsByClassName("autocomplete-items");
+                for (let i = 0; i < x.length; i++) {
+                    if (elmnt != x[i] && elmnt != input) {
+                        x[i].parentNode.removeChild(x[i]);
+                    }
+                }
+            }
+
+            document.addEventListener("click", function (e) {
+                closeAllLists(e.target);
+            });
+        }
+
+        function adicionarEscola() {
+            const pesquisaEscola = document.getElementById('pesquisaEscola');
+            const escolaNome = pesquisaEscola.value;
+            adicionarEscolaPorNome(escolaNome);
+            pesquisaEscola.value = '';
+        }
+
+        function adicionarEscolaPorNome(escolaNome) {
+            if (escolaNome) {
+                const escolaDados = dados.find(item => item.ESCOLA === escolaNome);
+                if (escolaDados) {
+                    const escolasSelecionadas = document.getElementById('escolasSelecionadas');
+                    const li = document.createElement('li');
+                    li.textContent = escolaNome;
+                    li.setAttribute('data-escola', escolaNome);
+                    escolasSelecionadas.appendChild(li);
+                }
+            }
         }
 
         function gerarEtiquetas() {
-            const escolaSelect = document.getElementById('escolaSelect');
             const etiquetasDiv = document.getElementById('etiquetas');
+            const escolasSelecionadas = document.getElementById('escolasSelecionadas').getElementsByTagName('li');
             etiquetasDiv.innerHTML = '';
 
-            Array.from(escolaSelect.selectedOptions).forEach(option => {
-                const escolaDados = dados.find(item => item.ESCOLA === option.value);
+            Array.from(escolasSelecionadas).forEach(li => {
+                const escolaSelecionada = li.getAttribute('data-escola');
+                const escolaDados = dados.find(item => item.ESCOLA === escolaSelecionada);
                 if (escolaDados) {
                     const etiquetaDiv = document.createElement('div');
                     etiquetaDiv.className = 'etiqueta';
@@ -121,8 +236,8 @@
 
                     const infoEscola = document.createElement('p');
                     infoEscola.className = 'infoEscola';
-                    infoEscola.textContent = `INEP: ${escolaDados.INEP}, GRE: ${escolaDados.GRE}, ID: ${escolaDados.ID}`;
-                    infoEscola.style.top = '50px';
+                    infoEscola.textContent = `INEP: ${escolaDados.INEP}, GERÊNCIA: ${escolaDados.GRE}, ID: ${escolaDados.ID}`;
+                    infoEscola.style.top = '90px';
                     infoEscola.style.left = '10px';
 
                     etiquetaDiv.appendChild(nomeEscola);
@@ -131,10 +246,23 @@
                     const svgFundo = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                     svgFundo.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
                     svgFundo.setAttribute('viewBox', '0 0 800 200');
-                    svgFundo.innerHTML = escolaDados.SVG_CONTENT;
                     etiquetaDiv.appendChild(svgFundo);
 
                     etiquetasDiv.appendChild(etiquetaDiv);
+                }
+            });
+        }
+
+        function filtrarListaEscolas() {
+            const filtro = document.getElementById('filtroEscolas').value.toLowerCase();
+            const listaEscolas = document.getElementById('listaEscolas');
+            listaEscolas.innerHTML = '';
+            dados.forEach(escola => {
+                if (escola.ESCOLA.toLowerCase().includes(filtro)) {
+                    const li = document.createElement('li');
+                    li.textContent = escola.ESCOLA;
+                    li.onclick = () => adicionarEscolaPorNome(escola.ESCOLA);
+                    listaEscolas.appendChild(li);
                 }
             });
         }
